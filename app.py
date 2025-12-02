@@ -91,7 +91,7 @@ IMPROVED VERSION:
 """
 
 
-def get_polished_feedback(client, raw_notes: str, student_name: str, client_name: str, dog_name: str) -> str:
+def get_polished_feedback(client, raw_notes: str, student_name: str, client_name: str, dog_name: str, language: str = "English") -> str:
     """Use Claude to transform raw notes into polished feedback."""
 
     context = f"Student being assessed: {student_name}\n"
@@ -100,10 +100,17 @@ def get_polished_feedback(client, raw_notes: str, student_name: str, client_name
     if dog_name:
         context += f"Dog's name: {dog_name}\n"
 
+    # Add language instruction if not English
+    language_instruction = ""
+    if language == "French":
+        language_instruction = "\n\nIMPORTANT: Write the entire feedback in French. Maintain the same warm, conversational tone in French."
+    elif language == "Dutch":
+        language_instruction = "\n\nIMPORTANT: Write the entire feedback in Dutch. Maintain the same warm, conversational tone in Dutch."
+
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=2000,
-        system=SYSTEM_PROMPT,
+        system=SYSTEM_PROMPT + language_instruction,
         messages=[
             {
                 "role": "user",
@@ -279,7 +286,11 @@ with col2:
     review_date = st.date_input("Review Date", value=datetime.now())
     dog_name = st.text_input("Dog Name", placeholder="e.g., Teddy")
 
-status = st.selectbox("Status", ["Passed", "Cleared", "Resubmit"])
+col3, col4 = st.columns(2)
+with col3:
+    status = st.selectbox("Status", ["Passed", "Cleared", "Resubmit"])
+with col4:
+    output_language = st.selectbox("Output Language", ["English", "French", "Dutch"])
 
 st.markdown("---")
 st.header("Raw Notes")
@@ -311,7 +322,7 @@ if st.button("✨ Generate Review", type="primary", use_container_width=True):
         with st.spinner("Generating polished review..."):
             try:
                 client = Anthropic(api_key=api_key)
-                polished = get_polished_feedback(client, raw_notes, student_name, client_name, dog_name)
+                polished = get_polished_feedback(client, raw_notes, student_name, client_name, dog_name, output_language)
                 st.session_state['polished_feedback'] = polished
                 st.session_state['student_name'] = student_name
                 st.session_state['review_date'] = review_date.strftime("%B %d, %Y")
