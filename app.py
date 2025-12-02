@@ -382,24 +382,30 @@ if 'polished_feedback' in st.session_state:
     st.markdown("---")
     st.header("📄 Download")
 
-    # Generate document
-    doc_buffer = create_review_document(
-        student_name=st.session_state['student_name'],
-        review_date=st.session_state['review_date'],
-        reviewer_name=st.session_state['reviewer_name'],
-        status=st.session_state['status'],
-        feedback_text=edited_feedback
-    )
+    # Generate document with error handling
+    try:
+        doc_buffer = create_review_document(
+            student_name=st.session_state['student_name'],
+            review_date=st.session_state['review_date'],
+            reviewer_name=st.session_state['reviewer_name'],
+            status=st.session_state['status'],
+            feedback_text=edited_feedback
+        )
 
-    # Download button
-    filename = f"Client_Practical_{st.session_state['student_name'].replace(' ', '_')}.docx"
-    st.download_button(
-        label="📥 Download Word Document",
-        data=doc_buffer,
-        file_name=filename,
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        use_container_width=True
-    )
+        # Get the bytes from the buffer
+        doc_bytes = doc_buffer.getvalue()
+
+        # Download button
+        filename = f"Client_Practical_{st.session_state['student_name'].replace(' ', '_')}.docx"
+        st.download_button(
+            label="📥 Download Word Document",
+            data=doc_bytes,
+            file_name=filename,
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            use_container_width=True
+        )
+    except Exception as e:
+        st.error(f"Error generating document: {e}")
 
 # Footer
 st.markdown("---")
