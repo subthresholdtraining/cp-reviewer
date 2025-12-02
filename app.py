@@ -61,6 +61,13 @@ Structure the output as:
 2. **What you could do differently next time** - constructive, actionable suggestions framed positively
 3. **Overall** - A brief summary paragraph (2-3 sentences) capturing the key points
 
+IMPORTANT - Preserve detail and terminology:
+- Do NOT over-summarize. Each distinct point in the notes should appear in the output.
+- Keep specific training terminology exactly as written: "Door is a Bore", "push-drop", "FOMO", "hyper-attachment", threshold terms, etc.
+- If the notes mention a specific timestamp (e.g., "at 25 min mark"), include it
+- If the notes have 10 points, the output should have roughly 10 bullet points across the sections
+- Polish the language, but don't condense multiple observations into one
+
 Style guidelines:
 - Use "I noticed...", "I liked that...", "Well done for...", "Nice job..."
 - Use specific observations from the notes
