@@ -121,7 +121,22 @@ TRANSLATION RULES:
 5. Keep the educational context of dog training
 """
     elif language == "Dutch":
-        language_instruction = "\n\nIMPORTANT: Write the entire feedback in Dutch. Maintain the same warm, conversational tone in Dutch. Keep these English expressions as-is: 'door is a bore', 'FOMO', 'push-drop'."
+        language_instruction = """
+
+IMPORTANT: Write the entire feedback in Dutch. Follow these translation guidelines:
+
+DUTCH TRANSLATION RULES:
+1. Keep these English expressions as-is: "door is a bore", "FOMO", "push-drop"
+2. Use "je/jij" (informal) not "u" (formal) - keep it warm and collegial
+3. Avoid literal translations of English idioms - use natural Dutch equivalents
+4. Watch word order in subordinate clauses (verb goes to end)
+5. Use natural Dutch compound words where appropriate
+6. Avoid anglicisms where good Dutch alternatives exist (e.g., use "terugkoppeling" not "feedback" if it fits naturally)
+7. Keep the warm, conversational, colleague-to-colleague tone
+8. Use modern Dutch - avoid stiff or formal phrasing
+9. "Separation anxiety" = "verlatingsangst" or "scheidingsangst"
+10. Be careful with false friends (e.g., "eventually" ≠ "eventueel")
+"""
 
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
