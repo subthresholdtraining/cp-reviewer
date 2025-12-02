@@ -103,9 +103,25 @@ def get_polished_feedback(client, raw_notes: str, student_name: str, client_name
     # Add language instruction if not English
     language_instruction = ""
     if language == "French":
-        language_instruction = "\n\nIMPORTANT: Write the entire feedback in French. Maintain the same warm, conversational tone in French."
+        language_instruction = """
+
+IMPORTANT: Write the entire feedback in French. Follow these translation guidelines:
+
+FRENCH DICTIONARY - Use these specific terms:
+- Behavior consultant = consultant(e) en comportement canin
+- Separation anxiety = anxiété de séparation
+- Dog trainer = Consultant(e) en comportement canin
+- Dog training = Éducation canine
+
+TRANSLATION RULES:
+1. Do NOT literally translate idioms - use the French equivalent instead
+2. Keep these English expressions as-is: "door is a bore", "FOMO", "hyper-attachement", "push-drop"
+3. Use modern, natural French - avoid antiquated expressions
+4. Maintain the warm, conversational, colleague-to-colleague tone
+5. Keep the educational context of dog training
+"""
     elif language == "Dutch":
-        language_instruction = "\n\nIMPORTANT: Write the entire feedback in Dutch. Maintain the same warm, conversational tone in Dutch."
+        language_instruction = "\n\nIMPORTANT: Write the entire feedback in Dutch. Maintain the same warm, conversational tone in Dutch. Keep these English expressions as-is: 'door is a bore', 'FOMO', 'push-drop'."
 
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
