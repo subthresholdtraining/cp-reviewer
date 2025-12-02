@@ -91,8 +91,8 @@ IMPROVED VERSION:
 """
 
 
-def get_polished_feedback(client, raw_notes: str, student_name: str, client_name: str, dog_name: str, language: str = "English") -> str:
-    """Use Claude to transform raw notes into polished feedback."""
+def get_polished_feedback(client, raw_notes: str, student_name: str, client_name: str, dog_name: str) -> str:
+    """Use Claude to transform raw notes into polished feedback (always in English)."""
 
     context = f"Student being assessed: {student_name}\n"
     if client_name:
@@ -100,12 +100,26 @@ def get_polished_feedback(client, raw_notes: str, student_name: str, client_name
     if dog_name:
         context += f"Dog's name: {dog_name}\n"
 
-    # Add language instruction if not English
-    language_instruction = ""
-    if language == "French":
-        language_instruction = """
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2000,
+        system=SYSTEM_PROMPT,
+        messages=[
+            {
+                "role": "user",
+                "content": f"{context}\nHere are the raw notes from watching the assessment video:\n\n{raw_notes}\n\nPlease transform these into a polished feedback document."
+            }
+        ]
+    )
 
-IMPORTANT: Write the entire feedback in French. Follow these translation guidelines:
+    return message.content[0].text
+
+
+def translate_feedback(client, english_text: str, target_language: str) -> str:
+    """Translate the polished English feedback to French or Dutch."""
+
+    if target_language == "French":
+        language_instruction = """You are translating a dog training assessment feedback document from English to French.
 
 FRENCH DICTIONARY - Use these specific terms:
 - Behavior consultant = consultant(e) en comportement canin
@@ -119,11 +133,12 @@ TRANSLATION RULES:
 3. Use modern, natural French - avoid antiquated expressions
 4. Maintain the warm, conversational, colleague-to-colleague tone
 5. Keep the educational context of dog training
-"""
-    elif language == "Dutch":
-        language_instruction = """
+6. Preserve the exact structure (bullet points, sections) of the original
 
-IMPORTANT: Write the entire feedback in Dutch. Follow these translation guidelines:
+Translate the following feedback to French:"""
+
+    elif target_language == "Dutch":
+        language_instruction = """You are translating a dog training assessment feedback document from English to Dutch.
 
 DUTCH TRANSLATION RULES:
 1. Keep these English expressions as-is: "door is a bore", "FOMO", "push-drop"
@@ -136,16 +151,19 @@ DUTCH TRANSLATION RULES:
 8. Use modern Dutch - avoid stiff or formal phrasing
 9. "Separation anxiety" = "verlatingsangst" or "scheidingsangst"
 10. Be careful with false friends (e.g., "eventually" ≠ "eventueel")
-"""
+11. Preserve the exact structure (bullet points, sections) of the original
+
+Translate the following feedback to Dutch:"""
+    else:
+        return english_text
 
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=2000,
-        system=SYSTEM_PROMPT + language_instruction,
         messages=[
             {
                 "role": "user",
-                "content": f"{context}\nHere are the raw notes from watching the assessment video:\n\n{raw_notes}\n\nPlease transform these into a polished feedback document."
+                "content": f"{language_instruction}\n\n{english_text}"
             }
         ]
     )
@@ -317,11 +335,7 @@ with col2:
     review_date = st.date_input("Review Date", value=datetime.now())
     dog_name = st.text_input("Dog Name", placeholder="e.g., Teddy")
 
-col3, col4 = st.columns(2)
-with col3:
-    status = st.selectbox("Status", ["Passed", "Cleared", "Resubmit"])
-with col4:
-    output_language = st.selectbox("Output Language", ["English", "French", "Dutch"])
+status = st.selectbox("Status", ["Passed", "Cleared", "Resubmit"])
 
 st.markdown("---")
 st.header("Raw Notes")
@@ -353,7 +367,7 @@ if st.button("✨ Generate Review", type="primary", use_container_width=True):
         with st.spinner("Generating polished review..."):
             try:
                 client = Anthropic(api_key=api_key)
-                polished = get_polished_feedback(client, raw_notes, student_name, client_name, dog_name, output_language)
+                polished = get_polished_feedback(client, raw_notes, student_name, client_name, dog_name)
                 st.session_state['polished_feedback'] = polished
                 st.session_state['student_name'] = student_name
                 st.session_state['review_date'] = review_date.strftime("%B %d, %Y")
@@ -378,6 +392,31 @@ if 'polished_feedback' in st.session_state:
 
     # Update session state if edited
     st.session_state['polished_feedback'] = edited_feedback
+
+    # Translation section
+    st.markdown("---")
+    st.header("🌍 Translate")
+    st.markdown("*Happy with the English version? Translate it:*")
+
+    col_lang, col_btn = st.columns([1, 2])
+    with col_lang:
+        target_language = st.selectbox("Language", ["French", "Dutch"], label_visibility="collapsed")
+    with col_btn:
+        translate_clicked = st.button(f"🔄 Translate to {target_language}", use_container_width=True)
+
+    if translate_clicked:
+        if not api_key:
+            st.error("API key not configured. Please contact your administrator.")
+        else:
+            with st.spinner(f"Translating to {target_language}..."):
+                try:
+                    client = Anthropic(api_key=api_key)
+                    translated = translate_feedback(client, edited_feedback, target_language)
+                    st.session_state['polished_feedback'] = translated
+                    st.success(f"Translated to {target_language}!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Translation error: {e}")
 
     st.markdown("---")
     st.header("📄 Download")
