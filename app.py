@@ -3,6 +3,7 @@ Client Practical Reviewer - Streamlit App
 Transforms raw grading notes into polished feedback documents.
 """
 
+import re
 import streamlit as st
 from anthropic import Anthropic
 from docx import Document
@@ -108,7 +109,7 @@ def get_polished_feedback(client, raw_notes: str, student_name: str, client_name
         context += f"Dog's name: {dog_name}\n"
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-4-6",
         max_tokens=2000,
         system=SYSTEM_PROMPT,
         messages=[
@@ -122,11 +123,65 @@ def get_polished_feedback(client, raw_notes: str, student_name: str, client_name
     return message.content[0].text
 
 
+def _ensure_section_headers(text: str) -> str:
+    """Safety net: if Claude translated the section headers, replace them with the English originals.
+
+    Looks for common French/Dutch translations of the three required headers and
+    swaps them back to English so the Word doc parser can find them.
+    """
+    # Patterns that match translated versions of each header (case-insensitive)
+    header_fixes = [
+        {
+            'english': '**What you did well**',
+            'patterns': [
+                r'\*\*Ce que (?:vous avez|tu as) bien fait\*\*',
+                r'\*\*Wat (?:je|u) goed (?:hebt |heeft )?gedaan\*\*',
+                r'\*\*(?:Points? forts?|Points? positifs?)\*\*',
+                r'\*\*Wat ging er goed\*\*',
+            ]
+        },
+        {
+            'english': '**What you could do differently next time**',
+            'patterns': [
+                r'\*\*Ce que (?:vous pourriez|tu pourrais) faire diff[ée]remment.+?\*\*',
+                r'\*\*Wat (?:je|u) de volgende keer anders (?:zou(?:dt)? )?kunnen doen\*\*',
+                r'\*\*(?:Points? [àa] am[ée]liorer|Axes? d.am[ée]lioration).*?\*\*',
+                r'\*\*Wat (?:je|u) anders (?:zou(?:dt)? )?kunnen doen\*\*',
+            ]
+        },
+        {
+            'english': '**Overall**',
+            'patterns': [
+                r'\*\*(?:En r[ée]sum[ée]|Conclusion|Bilan|Dans l.ensemble|Globalement)\*\*',
+                r'\*\*(?:Algeheel|Over het geheel|Samenvatting|Algemeen|Totaal)\*\*',
+            ]
+        },
+    ]
+
+    for fix in header_fixes:
+        # Check if the English header is already present
+        if fix['english'] in text:
+            continue
+        # Try each translated pattern
+        for pattern in fix['patterns']:
+            text, count = re.subn(pattern, fix['english'], text, count=1, flags=re.IGNORECASE)
+            if count > 0:
+                break
+
+    return text
+
+
 def translate_feedback(client, english_text: str, target_language: str) -> str:
     """Translate the polished English feedback to French or Dutch."""
 
     if target_language == "French":
         language_instruction = """You are translating a dog training assessment feedback document from English to French.
+
+CRITICAL - DO NOT TRANSLATE THESE SECTION HEADERS. Keep them EXACTLY as-is in English:
+- **What you did well**
+- **What you could do differently next time**
+- **Overall**
+Only translate the content underneath each header, not the headers themselves.
 
 FRENCH DICTIONARY - Use these specific terms:
 - Behavior consultant = consultant(e) en comportement canin
@@ -147,6 +202,12 @@ Translate the following feedback to French:"""
     elif target_language == "Dutch":
         language_instruction = """You are translating a dog training assessment feedback document from English to Dutch.
 
+CRITICAL - DO NOT TRANSLATE THESE SECTION HEADERS. Keep them EXACTLY as-is in English:
+- **What you did well**
+- **What you could do differently next time**
+- **Overall**
+Only translate the content underneath each header, not the headers themselves.
+
 DUTCH TRANSLATION RULES:
 1. Keep these English expressions as-is: "door is a bore", "FOMO", "push-drop"
 2. Use "je/jij" (informal) not "u" (formal) - keep it warm and collegial
@@ -165,7 +226,7 @@ Translate the following feedback to Dutch:"""
         return english_text
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-4-6",
         max_tokens=2000,
         messages=[
             {
@@ -175,7 +236,13 @@ Translate the following feedback to Dutch:"""
         ]
     )
 
-    return message.content[0].text
+    translated = message.content[0].text
+
+    # Safety net: ensure all three section headers survived translation.
+    # If Claude translated a header despite instructions, re-insert the English version.
+    translated = _ensure_section_headers(translated)
+
+    return translated
 
 
 def create_review_document(
@@ -455,4 +522,4 @@ if 'polished_feedback' in st.session_state:
 
 # Footer
 st.markdown("---")
-st.markdown("*Client Practical Reviewer v1.0 - SA Pro Trainer Certification*")
+st.markdown("*Client Practical Reviewer v1.1 - SA Pro Trainer Certification*")
